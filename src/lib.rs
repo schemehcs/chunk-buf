@@ -1,32 +1,32 @@
 #[derive(PartialEq, Debug)]
-pub struct Chunk<'a> {
-    pub bytes: &'a [u8],
+pub struct Chunk<'a, T> {
+    pub bytes: &'a [T],
     pub consumed: usize,
 }
 
-impl<'a> Chunk<'a> {
-    pub fn new(bytes: &'a [u8], consumed: usize) -> Self {
+impl<'a, T> Chunk<'a, T> {
+    pub fn new(bytes: &'a [T], consumed: usize) -> Self {
         Chunk { bytes, consumed }
     }
 }
 
 #[derive(Clone, Debug)]
-pub struct ChunkBuf {
-    buf: Vec<u8>,
+pub struct ChunkBuf<T: Default + Clone + Copy> {
+    buf: Vec<T>,
     cursor: usize,
     acc_consumed: usize,
 }
 
-impl ChunkBuf {
+impl<T: Default + Clone + Copy> ChunkBuf<T> {
     pub fn new(capacity: usize) -> Self {
         Self {
-            buf: vec![0; capacity],
+            buf: vec![T::default(); capacity],
             cursor: 0,
             acc_consumed: 0,
         }
     }
 
-    pub fn update(&mut self, bytes: &[u8]) -> Option<Chunk<'_>> {
+    pub fn update(&mut self, bytes: &[T]) -> Option<Chunk<'_, T>> {
         let cap = self.buf.capacity() - self.cursor;
         if cap > bytes.len() {
             let cursor_n = self.cursor + bytes.len();
@@ -42,7 +42,7 @@ impl ChunkBuf {
         }
     }
 
-    pub fn remainder(&self) -> &[u8] {
+    pub fn remainder(&self) -> &[T] {
         &self.buf[..self.cursor]
     }
 
@@ -51,10 +51,10 @@ impl ChunkBuf {
     }
 }
 
-impl Drop for ChunkBuf {
+impl<T: Default + Clone + Copy> Drop for ChunkBuf<T> {
     fn drop(&mut self) {
         // zero buffer to avoid leaving sensitive data on the heap
-        self.buf.fill(0);
+        self.buf.fill(T::default());
     }
 }
 
