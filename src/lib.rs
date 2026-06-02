@@ -19,6 +19,7 @@ pub struct ChunkBuf<T: Default + Clone + Copy> {
 
 impl<T: Default + Clone + Copy> ChunkBuf<T> {
     pub fn new(capacity: usize) -> Self {
+        assert!(capacity != 0);
         Self {
             buf: vec![T::default(); capacity],
             cursor: 0,
@@ -26,16 +27,28 @@ impl<T: Default + Clone + Copy> ChunkBuf<T> {
         }
     }
 
-    pub fn update(&mut self, bytes: &[T]) -> Option<Chunk<'_, T>> {
+    pub fn push(&mut self, e: T) -> Option<Chunk<'_, T>> {
+        self.buf[self.cursor] = e;
+        self.acc_consumed += 1;
+        if self.cursor == self.buf.len() - 1 {
+            self.cursor = 0;
+            Some(Chunk::new(&self.buf, 1))
+        } else {
+            self.cursor += 1;
+            None
+        }
+    }
+
+    pub fn update(&mut self, es: &[T]) -> Option<Chunk<'_, T>> {
         let cap = self.buf.capacity() - self.cursor;
-        if cap > bytes.len() {
-            let cursor_n = self.cursor + bytes.len();
-            self.buf[self.cursor..cursor_n].copy_from_slice(bytes);
-            self.acc_consumed += bytes.len();
+        if cap > es.len() {
+            let cursor_n = self.cursor + es.len();
+            self.buf[self.cursor..cursor_n].copy_from_slice(es);
+            self.acc_consumed += es.len();
             self.cursor = cursor_n;
             None
         } else {
-            self.buf[self.cursor..].copy_from_slice(&bytes[..cap]);
+            self.buf[self.cursor..].copy_from_slice(&es[..cap]);
             self.acc_consumed += cap;
             self.cursor = 0;
             Some(Chunk::new(&self.buf, cap))
